@@ -1,9 +1,12 @@
 #!/bin/bash
 
 BASE=/datax/scratch/wlll2x/seticore_test
-OUT=$BASE/outputs
 
-mkdir -p "$OUT"
+SETI_OUT=$BASE/seticore_outputs
+TURBO_OUT=$BASE/turboSETI_outputs
+
+mkdir -p "$SETI_OUT"
+mkdir -p "$TURBO_OUT"
 
 
 echo "===================================="
@@ -19,11 +22,26 @@ do
     echo ""
     echo "Processing $name"
 
+
+    echo "---- seticore ----"
+
     seticore \
         "$f" \
-        --output "$OUT/${name}.dat" \
+        --output "$SETI_OUT/${name}.dat" \
         --max_drift 40 \
         --snr 3
+
+
+    echo "---- turboSETI ----"
+
+    python /home/wlll2x/midres_narrow/voyager/scripts/turboSEIT_midres_search.py \
+        --case "$name=$f" \
+        --output-dir "$TURBO_OUT" \
+        --snr 3 \
+        --min-drift 0 \
+        --max-drift 40 \
+        --nfpc 1024
+
 
 done
 
@@ -43,11 +61,25 @@ do
     echo "Processing $name"
 
 
+    echo "---- seticore ----"
+
     seticore \
         "$f" \
-        --output "$OUT/${name}.dat" \
+        --output "$SETI_OUT/${name}.dat" \
         --max_drift 40 \
         --snr 3
+
+
+    echo "---- turboSETI ----"
+
+    python /home/wlll2x/midres_narrow/voyager/scripts/turboSEIT_midres_search.py \
+        --case "$name=$f" \
+        --output-dir "$TURBO_OUT" \
+        --snr 3 \
+        --min-drift 0 \
+        --max-drift 40 \
+        --nfpc 1024
+
 
 done
 

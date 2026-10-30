@@ -1,88 +1,134 @@
 #!/bin/bash
 
-BASE=/datax/scratch/wlll2x/seticore_test
+# ==========================================================
+# Seticore search over injected SNR sweep
+# ==========================================================
 
-SETI_OUT=$BASE/seticore_outputs
-TURBO_OUT=$BASE/turboSETI_outputs
-
-mkdir -p "$SETI_OUT"
-mkdir -p "$TURBO_OUT"
+shopt -s nullglob
 
 
-echo "===================================="
-echo "Running Voyager"
-echo "===================================="
+# ==========================================================
+# Directories
+# ==========================================================
+
+BASE=/datax/scratch/wlll2x/carmen_midres/seticore_snr_sweep
+OUT=/datax/scratch/wlll2x/carmen_midres/seticore_snr_results
 
 
-for f in "$BASE"/voyager_fixed/*.h5
+# ==========================================================
+# Seticore parameters
+# ==========================================================
+
+MAX_DRIFT=40
+SNR_THRESHOLD=5
+
+
+# ==========================================================
+# Counters
+# ==========================================================
+
+processed=0
+failed=0
+empty_groups=0
+
+
+# ==========================================================
+# Loop over SNR directories
+# ==========================================================
+
+for snr_dir in "$BASE"/snr_*
 do
+    [ -d "$snr_dir" ] || continue
 
-    name=$(basename "$f" .h5)
+    snr_name=$(basename "$snr_dir")
 
-    echo ""
-    echo "Processing $name"
-
-
-    echo "---- seticore ----"
-
-    seticore \
-        "$f" \
-        --output "$SETI_OUT/${name}.dat" \
-        --max_drift 40 \
-        --snr 3
+    echo
+    echo "======================================================"
+    echo "Injected SNR directory: $snr_name"
+    echo "======================================================"
 
 
-    echo "---- turboSETI ----"
+    # ======================================================
+    # Loop over cadence directories
+    # ======================================================
 
-    python /home/wlll2x/midres_narrow/voyager/scripts/turboSEIT_midres_search.py \
-        --case "$name=$f" \
-        --output-dir "$TURBO_OUT" \
-        --snr 3 \
-        --min-drift 0 \
-        --max-drift 40 \
-        --nfpc 1024
+    for cadence_dir in "$snr_dir"/cadence_*
+    do
+        [ -d "$cadence_dir" ] || continue
+
+        cadence_name=$(basename "$cadence_dir")
+        cadence_out="$OUT/$snr_name/$cadence_name"
+
+        mkdir -p "$cadence_out"
+
+        echo
+        echo "------------------------------------------------------"
+        echo "Cadence: $cadence_name"
+        echo "------------------------------------------------------"
 
 
+        # ==================================================
+        # Find injected H5 files
+        # ==================================================
+
+        files=("$cadence_dir"/*_injected.h5)
+
+        if [ ${#files[@]} -eq 0 ]
+        then
+            echo "No *_injected.h5 files found."
+            echo "Directory: $cadence_dir"
+
+            empty_groups=$((empty_groups + 1))
+            continue
+        fi
+
+        echo "Found ${#files[@]} H5 files."
+
+
+        # ==================================================
+        # Run Seticore on every observation
+        # ==================================================
+
+        for f in "${files[@]}"
+        do
+            filename=$(basename "$f" .h5)
+            output_dat="$cadence_out/${filename}.dat"
+
+            echo
+            echo "Processing: $filename"
+            echo "Input     : $f"
+            echo "Output    : $output_dat"
+
+            if seticore \
+                "$f" \
+                --output "$output_dat" \
+                --max_drift "$MAX_DRIFT" \
+                --snr "$SNR_THRESHOLD"
+            then
+                processed=$((processed + 1))
+            else
+                echo "WARNING: Seticore failed on:"
+                echo "$f"
+
+                failed=$((failed + 1))
+            fi
+        done
+    done
 done
 
 
-echo ""
-echo "===================================="
-echo "Running CARMEN OFF"
-echo "===================================="
+# ==========================================================
+# Final summary
+# ==========================================================
 
-
-for f in "$BASE"/carmen_off_fixed/*.h5
-do
-
-    name=$(basename "$f" .h5)
-
-    echo ""
-    echo "Processing $name"
-
-
-    echo "---- seticore ----"
-
-    seticore \
-        "$f" \
-        --output "$SETI_OUT/${name}.dat" \
-        --max_drift 40 \
-        --snr 3
-
-
-    echo "---- turboSETI ----"
-
-    python /home/wlll2x/midres_narrow/voyager/scripts/turboSEIT_midres_search.py \
-        --case "$name=$f" \
-        --output-dir "$TURBO_OUT" \
-        --snr 3 \
-        --min-drift 0 \
-        --max-drift 40 \
-        --nfpc 1024
-
-
-done
-
-
-echo ""
-echo "COMPLETE"
+echo
+echo "======================================================"
+echo "Seticore SNR sweep complete"
+echo "======================================================"
+echo "Processed files : $processed"
+echo "Failed files    : $failed"
+echo "Empty groups    : $empty_groups"
+echo "Results root    : $OUT"
+echo "Maximum drift   : $MAX_DRIFT Hz/s"
+echo "SNR threshold   : $SNR_THRESHOLD"
+echo "======================================================"

@@ -2,3 +2,39 @@ __pycache__/
 *.pyc
 *.pyo
 *.swp
+.venv/
+*.egg-info/
+build/
+dist/
+/results/
+/carmen_midres/outputs/boundary_diagnostics/
+
+# Local editor, account, and runtime configuration
+.vscode/
+.codex/
+.aws/
+.env
+.env.*
+!.env.example
+*.code-workspace
+.ipynb_checkpoints/
+
+# Observation data and generated working copies (never needed to clone source)
+*.h5
+*.hdf5
+*.fil
+*.raw
+/tutorial/working_data/
+
+# Generated search reports, figures, manifests, and notebook exports
+/carmen_midres/outputs/
+/tutorial/outputs/
+/tutorial/notebook_outputs/
+
+# Local notebook backups and operating-system artifacts
+*.backup.ipynb
+*_backup.ipynb
+*.bak
+*~
+.DS_Store
+Thumbs.db
